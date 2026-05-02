@@ -1,0 +1,40 @@
+name: signspeak
+description: On-device sign language to speech using MediaPipe and Gemini Nano.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Camera
+  camera: ^0.11.0+2
+
+  # MediaPipe hand landmarks — bundles the model, JNI bridge, handles YUV
+  hand_landmarker: ^2.1.2
+
+  # Gemini (on-device via AICore, with API fallback)
+  google_generative_ai: ^0.4.6
+
+  # Text to Speech
+  flutter_tts: ^4.0.2
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Permissions
+  permission_handler: ^11.3.1
+
+  # Shared preferences (settings)
+  shared_preferences: ^2.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
