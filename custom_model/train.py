@@ -36,12 +36,18 @@ print("Loading data...")
 df = pd.read_csv(CSV_FILE)
 
 with open(LABEL_FILE) as f:
-    labels = [l.strip() for l in f.readlines()]
+    all_labels = [l.strip() for l in f.readlines()]
 
+# Use only classes present in the CSV
+present = sorted(df['label'].unique())
+labels = [all_labels[i] for i in present]
 num_classes = len(labels)
+
 print(f"Classes ({num_classes}): {labels}")
 print(f"Total samples: {len(df)}")
-print(f"Samples per class:\n{df['label'].value_counts().sort_index()}")
+print(f"Samples per class:")
+for i, name in enumerate(labels):
+    print(f"  {name}: {(df['label']==i).sum()}")
 
 X = df.drop('label', axis=1).values.astype(np.float32)
 y = df['label'].values.astype(np.int32)
@@ -63,7 +69,7 @@ print(f"\nSplit: train={len(X_train)}, val={len(X_val)}, test={len(X_test)}")
 # ── Build model ───────────────────────────────────────────────────────────────
 print("\nBuilding model...")
 model = tf.keras.Sequential([
-    tf.keras.layers.Input(shape=(63,)),
+    tf.keras.layers.Input(shape=(126,)),
     tf.keras.layers.Dense(128, activation='relu'),
     tf.keras.layers.BatchNormalization(),
     tf.keras.layers.Dropout(0.3),
@@ -109,7 +115,7 @@ print(f"Test accuracy: {acc*100:.1f}%  |  Loss: {loss:.4f}")
 
 y_pred = np.argmax(model.predict(X_test, verbose=0), axis=1)
 print("\nClassification report:")
-print(classification_report(y_test, y_pred, target_names=labels))
+print(classification_report(y_test, y_pred, labels=list(range(num_classes)), target_names=labels))
 
 # ── Plot training curves ──────────────────────────────────────────────────────
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))

@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  tflite_flutter: ^0.12.1
 
   # Camera
   camera: ^0.11.0+2
