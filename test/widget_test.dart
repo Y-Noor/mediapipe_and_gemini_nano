@@ -1,30 +1,73 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:signspeak/main.dart';
+import 'package:signspeak/services/gemini_service.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  const channel = MethodChannel('signspeak/gemini_nano');
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  test('cleanSignTokens normalizes labels and removes duplicates', () {
+    expect(
+      GeminiService.cleanSignTokens([
+        ' water ',
+        'WATER',
+        'thank you',
+        'THANK_YOU',
+        'none',
+        '',
+        'help-please',
+      ]),
+      ['WATER', 'THANK_YOU', 'HELP_PLEASE'],
+    );
+  });
+
+  test('completeSentence falls back when Gemini Nano is unavailable', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'isAvailable') return false;
+      throw PlatformException(code: 'NANO_UNAVAILABLE');
+    });
+
+    final service = GeminiService(channel: channel);
+    await service.initialize();
+
+    expect(service.isOnDevice, isFalse);
+    expect(
+      await service.completeSentence(['WATER', 'WATER', 'PLEASE']),
+      'Could I have some water, please?',
+    );
+  });
+
+  test('completeSentence sends only cleaned tokens to Gemini Nano', () async {
+    String? prompt;
+
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'isAvailable') return true;
+      if (call.method == 'completeSentence') {
+        prompt = (call.arguments as Map)['prompt'] as String?;
+        return 'I need some water, please.';
+      }
+      return null;
+    });
+
+    final service = GeminiService(channel: channel);
+    await service.initialize();
+
+    final sentence = await service.completeSentence(
+      ['water', 'WATER', 'please'],
+    );
+
+    expect(sentence, 'I need some water, please.');
+    expect(prompt, contains('WATER PLEASE'));
+    expect(prompt, isNot(contains('WATER WATER')));
+    expect(service.isOnDevice, isTrue);
   });
 }

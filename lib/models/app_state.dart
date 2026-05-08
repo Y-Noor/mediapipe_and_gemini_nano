@@ -101,14 +101,26 @@ class AppStateNotifier extends StateNotifier<AppState> {
   Future<void> _triggerCompletion() async {
     if (state.currentTokens.isEmpty) return;
 
-    final tokens = state.currentTokens.map((t) => t.sign).toList();
-    state = state.copyWith(isProcessing: true);
+    final cleanedTokens = _cleanTokens(state.currentTokens);
+    if (cleanedTokens.isEmpty) {
+      state = state.copyWith(currentTokens: [], currentGesture: null);
+      return;
+    }
+
+    state = state.copyWith(
+      currentTokens: cleanedTokens,
+      isProcessing: true,
+    );
 
     try {
-      final sentence = await _geminiService.completeSentence(tokens, language: state.selectedLanguage);
+      final tokenSigns = cleanedTokens.map((t) => t.sign).toList();
+      final sentence = await _geminiService.completeSentence(
+        tokenSigns,
+        language: state.selectedLanguage,
+      );
       if (sentence.isNotEmpty) {
         final entry = SentenceEntry(
-          tokens: state.currentTokens,
+          tokens: cleanedTokens,
           sentence: sentence,
           timestamp: DateTime.now(),
         );
@@ -128,6 +140,24 @@ class AppStateNotifier extends StateNotifier<AppState> {
     } catch (_) {
       state = state.copyWith(isProcessing: false);
     }
+  }
+
+  List<SignToken> _cleanTokens(List<SignToken> tokens) {
+    final seen = <String>{};
+    final cleaned = <SignToken>[];
+
+    for (final token in tokens) {
+      final normalized = GeminiService.normalizeSign(token.sign);
+      if (normalized.isEmpty || seen.contains(normalized)) continue;
+      seen.add(normalized);
+      cleaned.add(SignToken(
+        sign: normalized,
+        timestamp: token.timestamp,
+        isGemini: token.isGemini,
+      ));
+    }
+
+    return cleaned;
   }
 
   Future<void> speakCurrent() async {
