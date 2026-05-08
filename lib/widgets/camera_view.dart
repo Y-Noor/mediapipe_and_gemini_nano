@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hand_landmarker/hand_landmarker.dart';
 import '../models/app_state.dart';
@@ -16,6 +17,10 @@ class CameraView extends ConsumerStatefulWidget {
 
 class _CameraViewState extends ConsumerState<CameraView>
     with WidgetsBindingObserver {
+  // Rotate input before landmark detection/inference when needed.
+  // Allowed values: 0, 90, 180, 270.
+  static const int _inferenceRotationOffset = 90;
+
   CameraController? _controller;
   int _sensorOrientation = 0;
   bool _isFrontCamera = true;
@@ -49,10 +54,13 @@ class _CameraViewState extends ConsumerState<CameraView>
     );
 
     await _controller!.initialize();
+    await _controller!.lockCaptureOrientation(DeviceOrientation.portraitUp);
 
     // Pass sensor orientation to gesture service
     final gestureService = ref.read(gestureServiceProvider);
     gestureService.setSensorOrientation(_sensorOrientation);
+    gestureService.setIsFrontCamera(_isFrontCamera);
+    gestureService.setInferenceRotationOffset(_inferenceRotationOffset);
     gestureService.onLandmarksDetected = (landmarksByHand) {
       if (mounted) {
         ref.read(landmarksProvider.notifier).state = landmarksByHand;
@@ -73,7 +81,10 @@ class _CameraViewState extends ConsumerState<CameraView>
       _frameCount++;
       if (_frameCount % _frameSkip != 0) return;
       final ts = DateTime.now().millisecondsSinceEpoch;
-      gestureService.processFrame(image, ts); // now synchronous
+      final frameRotationDegrees = gestureService.computeFrameRotationDegrees(
+        0, // Portrait-up only pipeline for stable inference.
+      );
+      gestureService.processFrame(image, ts, frameRotationDegrees);
     });
   }
 
@@ -97,6 +108,8 @@ class _CameraViewState extends ConsumerState<CameraView>
     }
 
     final landmarksByHand = ref.watch(landmarksProvider);
+    final gestureService = ref.read(gestureServiceProvider);
+    final frameRotationDegrees = gestureService.computeFrameRotationDegrees(0);
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Stack(
@@ -109,7 +122,7 @@ class _CameraViewState extends ConsumerState<CameraView>
                 landmarksByHand: landmarksByHand,
                 imageSize: _controller!.value.previewSize!,
                 isFrontCamera: _isFrontCamera,
-                sensorOrientation: _sensorOrientation,
+                frameRotationDegrees: frameRotationDegrees,
                 mirrorFrontCamera: true,
               ),
             ),

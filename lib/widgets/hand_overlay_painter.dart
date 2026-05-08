@@ -5,7 +5,7 @@ class HandOverlayPainter extends CustomPainter {
   final List<List<Landmark>> landmarksByHand;
   final Size imageSize;
   final bool isFrontCamera;
-  final int sensorOrientation;
+  final int frameRotationDegrees;
   final bool mirrorFrontCamera;
 
   static const List<(int, int)> _connections = [
@@ -21,7 +21,7 @@ class HandOverlayPainter extends CustomPainter {
     required this.landmarksByHand,
     required this.imageSize,
     this.isFrontCamera = true,
-    this.sensorOrientation = 0,
+    this.frameRotationDegrees = 0,
     this.mirrorFrontCamera = false,
   });
 
@@ -35,7 +35,7 @@ class HandOverlayPainter extends CustomPainter {
 
       // Hand landmarks are normalized in sensor space; rotate into preview space.
       // Use the opposite 90deg direction mapping to match the camera preview.
-      switch (sensorOrientation % 360) {
+      switch (frameRotationDegrees % 360) {
         case 90:
           final nx = 1.0 - y;
           final ny = x;

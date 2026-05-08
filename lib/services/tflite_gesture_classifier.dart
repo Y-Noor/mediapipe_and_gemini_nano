@@ -32,11 +32,17 @@ class TfliteGestureClassifier {
   }
 
   /// Pass all detected hands (1 or 2). Returns (label, confidence) or null.
-  (String, double)? classify(List<List<Landmark>> allHands) {
+  (String, double)? classify(
+    List<List<Landmark>> allHands, {
+    int rotationDegrees = 0,
+  }) {
     if (!_isLoaded || _interpreter == null) return null;
 
     try {
-      final input = _extractFeatures(allHands);
+      final input = _extractFeatures(
+        allHands,
+        rotationDegrees: rotationDegrees,
+      );
       if (input == null) return null;
 
       final output = List.filled(_labels.length, 0.0).reshape([1, _labels.length]);
@@ -56,18 +62,31 @@ class TfliteGestureClassifier {
     }
   }
 
-  Float32List? _extractFeatures(List<List<Landmark>> allHands) {
+  Float32List? _extractFeatures(
+    List<List<Landmark>> allHands, {
+    required int rotationDegrees,
+  }) {
     if (allHands.isEmpty) return null;
 
     final features = Float32List(126);
 
     // Fill hand 0 (first 63 values)
     if (allHands.isNotEmpty) {
-      _fillHand(allHands[0], features, offset: 0);
+      _fillHand(
+        allHands[0],
+        features,
+        offset: 0,
+        rotationDegrees: rotationDegrees,
+      );
     }
     // Fill hand 1 (next 63 values) — zeros if only 1 hand
     if (allHands.length > 1) {
-      _fillHand(allHands[1], features, offset: 63);
+      _fillHand(
+        allHands[1],
+        features,
+        offset: 63,
+        rotationDegrees: rotationDegrees,
+      );
     }
 
     return features;
@@ -81,16 +100,42 @@ class TfliteGestureClassifier {
     return best;
   }
 
-  void _fillHand(List<Landmark> lm, Float32List out, {required int offset}) {
+  void _fillHand(
+    List<Landmark> lm,
+    Float32List out, {
+    required int offset,
+    required int rotationDegrees,
+  }) {
     if (lm.length < 21) return;
     final wristX = lm[0].x, wristY = lm[0].y, wristZ = lm[0].z;
     final dx = lm[9].x - wristX;
     final dy = lm[9].y - wristY;
     final dz = lm[9].z - wristZ;
     final span = math.sqrt(dx * dx + dy * dy + dz * dz) + 1e-6;
+    final rot = ((rotationDegrees % 360) + 360) % 360;
     for (int i = 0; i < 21; i++) {
-      out[offset + i * 3 + 0] = (lm[i].x - wristX) / span;
-      out[offset + i * 3 + 1] = (lm[i].y - wristY) / span;
+      final relX = lm[i].x - wristX;
+      final relY = lm[i].y - wristY;
+      double rx = relX;
+      double ry = relY;
+
+      switch (rot) {
+        case 90:
+          rx = relY;
+          ry = -relX;
+          break;
+        case 180:
+          rx = -relX;
+          ry = -relY;
+          break;
+        case 270:
+          rx = -relY;
+          ry = relX;
+          break;
+      }
+
+      out[offset + i * 3 + 0] = rx / span;
+      out[offset + i * 3 + 1] = ry / span;
       out[offset + i * 3 + 2] = (lm[i].z - wristZ) / span;
     }
   }

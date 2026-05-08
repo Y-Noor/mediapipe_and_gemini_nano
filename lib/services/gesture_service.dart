@@ -8,6 +8,8 @@ class GestureService {
   bool _isInitialized = false;
   bool _isProcessing = false;
   int _sensorOrientation = 0;
+  bool _isFrontCamera = true;
+  int _inferenceRotationOffsetDegrees = 0;
 
   final List<String> _recentGestures = [];
   static const int _windowSize = 5;
@@ -34,12 +36,30 @@ class GestureService {
     _sensorOrientation = orientation;
   }
 
-  void processFrame(CameraImage image, int timestamp) {
+  void setIsFrontCamera(bool isFrontCamera) {
+    _isFrontCamera = isFrontCamera;
+  }
+
+  void setInferenceRotationOffset(int degrees) {
+    final normalized = ((degrees % 360) + 360) % 360;
+    _inferenceRotationOffsetDegrees = normalized;
+  }
+
+  int computeFrameRotationDegrees(int deviceOrientationDegrees) {
+    final base = _isFrontCamera
+        ? (_sensorOrientation + deviceOrientationDegrees) % 360
+        : (_sensorOrientation - deviceOrientationDegrees + 360) % 360;
+    return base;
+  }
+
+  int get inferenceRotationOffsetDegrees => _inferenceRotationOffsetDegrees;
+
+  void processFrame(CameraImage image, int timestamp, int frameRotationDegrees) {
     if (!_isInitialized || _plugin == null || _isProcessing) return;
     _isProcessing = true;
 
     try {
-      final List<Hand> hands = _plugin!.detect(image, _sensorOrientation);
+      final List<Hand> hands = _plugin!.detect(image, frameRotationDegrees);
 
       if (hands.isEmpty) {
         _recentGestures.clear();
@@ -55,7 +75,10 @@ class GestureService {
       if (_classifier.isLoaded) {
         // Pass all detected hands to TFLite classifier
         final allHandLandmarks = hands.map((h) => h.landmarks).toList();
-        final result = _classifier.classify(allHandLandmarks);
+        final result = _classifier.classify(
+          allHandLandmarks,
+          rotationDegrees: _inferenceRotationOffsetDegrees,
+        );
         if (result != null) {
           gesture = result.$1;
           confidence = result.$2;
