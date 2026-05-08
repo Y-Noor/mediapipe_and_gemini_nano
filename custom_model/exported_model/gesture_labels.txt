@@ -12,3 +12,4 @@ thank_you
 listen
 hello
 please
+AI

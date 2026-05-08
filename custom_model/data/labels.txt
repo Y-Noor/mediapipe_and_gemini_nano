@@ -12,9 +12,4 @@ thank_you
 listen
 hello
 please
-yes
-no
-help
-more
-stop
-i_love_you
+AI

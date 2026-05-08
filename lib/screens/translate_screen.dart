@@ -46,6 +46,14 @@ class TranslateScreen extends ConsumerWidget {
               onClear: notifier.clearTokens,
             ),
 
+            // ── Controls (TTS & Language) ───────────────────────────
+            _ControlBar(
+              autoSpeak: state.autoSpeak,
+              onToggleAutoSpeak: notifier.toggleAutoSpeak,
+              selectedLanguage: state.selectedLanguage,
+              onLanguageChanged: notifier.setLanguage,
+            ),
+
             // ── Sentence output ─────────────────────────────────────
             Expanded(
               flex: 3,
@@ -345,6 +353,111 @@ class _TokenStrip extends StatelessWidget {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Control Bar ──────────────────────────────────────────────────────────────
+
+class _ControlBar extends StatelessWidget {
+  final bool autoSpeak;
+  final VoidCallback onToggleAutoSpeak;
+  final String selectedLanguage;
+  final ValueChanged<String> onLanguageChanged;
+
+  const _ControlBar({
+    required this.autoSpeak,
+    required this.onToggleAutoSpeak,
+    required this.selectedLanguage,
+    required this.onLanguageChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          // TTS Toggle
+          GestureDetector(
+            onTap: onToggleAutoSpeak,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: autoSpeak
+                    ? const Color(0x20A78BFA)
+                    : const Color(0x10FFFFFF),
+                border: Border.all(
+                  color: autoSpeak
+                      ? const Color(0x60A78BFA)
+                      : const Color(0x20FFFFFF),
+                  width: 0.5,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    autoSpeak ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                    size: 16,
+                    color: autoSpeak
+                        ? const Color(0xFFA78BFA)
+                        : Colors.white38,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Text-to-Speech',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: autoSpeak
+                          ? const Color(0xFFA78BFA)
+                          : Colors.white38,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+          // Language Dropdown
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: const Color(0x10FFFFFF),
+              border: Border.all(color: const Color(0x20FFFFFF), width: 0.5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: selectedLanguage,
+                dropdownColor: const Color(0xFF1A1A2E),
+                icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                    size: 18, color: Colors.white38),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w500,
+                ),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    onLanguageChanged(newValue);
+                  }
+                },
+                items: <String>['English', 'French', 'Spanish', 'German']
+                    .map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
         ],
       ),
     );

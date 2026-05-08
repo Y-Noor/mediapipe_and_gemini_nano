@@ -12,14 +12,15 @@ class GeminiService {
       'You are a sign language interpreter. Convert ASL sign tokens into '
       'natural fluent English sentences. Rules: ASL omits articles and '
       'auxiliaries so you must add them. Output ONLY the final sentence, '
-      'nothing else. Keep it under 15 words.\n\n'
+      'nothing else. Keep it under 15 words.\nRemove duplicates from the'
+      'tokens before generating the sentence.\n\n'
       'Examples:\n'
       'WATER NEED → I need some water please.\n'
       'NAME MY JOHN → My name is John.\n'
       'HELP ME PLEASE → Could you please help me?\n'
       'THANK_YOU → Thank you.\n'
       'HELLO → Hello there!\n'
-      'WHERE BATHROOM → Where is the bathroom?';
+      'WHERE BATHROOM → Where is the bathroom?\n'
 
   Future<void> initialize() async {
     if (_apiKey == 'YOUR_API_KEY_HERE') {
@@ -44,9 +45,13 @@ class GeminiService {
     }
   }
 
-  Future<String> completeSentence(List<String> tokens) async {
+  Future<String> completeSentence(List<String> tokens, {String language = 'English'}) async {
     if (tokens.isEmpty) return '';
-    final input = tokens.join(' ');
+    
+    var input = tokens.join(' ');
+    if (language != 'English') {
+      input = '$input (Translate output to $language)';
+    }
 
     if (_isAvailable && _chat != null) {
       try {

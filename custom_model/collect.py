@@ -42,15 +42,11 @@ SIGNS = [
     'listen',         # 1-hand: index finger to ear
     'hello',          # 1-hand: open palm wave
     'please',         # 1-hand: flat hand circular on chest
-    'yes',            # 1-hand: fist nodding
-    'no',             # 2-hands: index fingers crossing
-    'help',           # 2-hands: one fist lifted on open palm
-    'more',           # 2-hands: fingertips tapping together
-    'stop',           # 2-hands: flat hand chops into palm
-    'i_love_you',     # 1-hand: ILY handshape
+    'AI',             
+
 ]
 
-TWO_HANDED = {'welcome', 'build', 'name', 'no', 'help', 'more', 'stop'}
+TWO_HANDED = {'welcome', 'build', 'name', 'no', 'help', 'more', 'stop', 'AI'}
 
 SAMPLES_PER_SIGN = 150
 OUTPUT_DIR = 'data'

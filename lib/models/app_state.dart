@@ -94,7 +94,7 @@ class AppStateNotifier extends StateNotifier<AppState> {
     state = state.copyWith(isProcessing: true);
 
     try {
-      final sentence = await _geminiService.completeSentence(tokens);
+      final sentence = await _geminiService.completeSentence(tokens, language: state.selectedLanguage);
       if (sentence.isNotEmpty) {
         final entry = SentenceEntry(
           tokens: state.currentTokens,
@@ -142,6 +142,11 @@ class AppStateNotifier extends StateNotifier<AppState> {
     state = state.copyWith(autoSpeak: !state.autoSpeak);
   }
 
+  void setLanguage(String language) {
+    state = state.copyWith(selectedLanguage: language);
+    _ttsService.setLanguage(language);
+  }
+
   void setGeminiAvailable(bool v) {
     state = state.copyWith(geminiOnDevice: v);
   }
@@ -164,6 +169,7 @@ class AppState {
   final bool isProcessing;
   final bool autoSpeak;
   final bool geminiOnDevice;
+  final String selectedLanguage;
 
   const AppState({
     this.currentTokens = const [],
@@ -174,6 +180,7 @@ class AppState {
     this.isProcessing = false,
     this.autoSpeak = true,
     this.geminiOnDevice = false,
+    this.selectedLanguage = 'English',
   });
 
   AppState copyWith({
@@ -185,6 +192,7 @@ class AppState {
     bool? isProcessing,
     bool? autoSpeak,
     bool? geminiOnDevice,
+    String? selectedLanguage,
   }) {
     return AppState(
       currentTokens: currentTokens ?? this.currentTokens,
@@ -195,6 +203,7 @@ class AppState {
       isProcessing: isProcessing ?? this.isProcessing,
       autoSpeak: autoSpeak ?? this.autoSpeak,
       geminiOnDevice: geminiOnDevice ?? this.geminiOnDevice,
+      selectedLanguage: selectedLanguage ?? this.selectedLanguage,
     );
   }
 }
