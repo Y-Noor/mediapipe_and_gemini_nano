@@ -16,7 +16,7 @@ class GestureService {
   static const int _debounceMs = 900;
 
   Function(String gesture, double confidence)? onGestureDetected;
-  Function(List<Landmark> landmarks)? onLandmarksDetected;
+  Function(List<List<Landmark>> landmarksByHand)? onLandmarksDetected;
 
   bool get usingTflite => _classifier.isLoaded;
 
@@ -46,8 +46,8 @@ class GestureService {
         return;
       }
 
-      // Send first hand landmarks for overlay drawing
-      onLandmarksDetected?.call(hands.first.landmarks);
+      // Send all detected hands for overlay drawing.
+      onLandmarksDetected?.call(hands.map((h) => h.landmarks).toList());
 
       String? gesture;
       double confidence = 0.0;
@@ -69,10 +69,14 @@ class GestureService {
       if (gesture == null) return;
 
       _recentGestures.add(gesture);
-      if (_recentGestures.length > _windowSize) _recentGestures.removeAt(0);
+      if (_recentGestures.length > _windowSize) {
+        _recentGestures.removeAt(0);
+      }
 
       final counts = <String, int>{};
-      for (final g in _recentGestures) counts[g] = (counts[g] ?? 0) + 1;
+      for (final g in _recentGestures) {
+        counts[g] = (counts[g] ?? 0) + 1;
+      }
       final dominant = counts.entries.reduce((a, b) => a.value > b.value ? a : b);
 
       if (dominant.value >= (_windowSize * 0.6).ceil()) {

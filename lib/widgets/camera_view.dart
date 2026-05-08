@@ -3,10 +3,9 @@ import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hand_landmarker/hand_landmarker.dart';
 import '../models/app_state.dart';
-import '../services/gesture_service.dart';
 import 'hand_overlay_painter.dart';
 
-final landmarksProvider = StateProvider<List<Landmark>?>((ref) => null);
+final landmarksProvider = StateProvider<List<List<Landmark>>>((ref) => const []);
 
 class CameraView extends ConsumerStatefulWidget {
   const CameraView({super.key});
@@ -18,6 +17,8 @@ class CameraView extends ConsumerStatefulWidget {
 class _CameraViewState extends ConsumerState<CameraView>
     with WidgetsBindingObserver {
   CameraController? _controller;
+  int _sensorOrientation = 0;
+  bool _isFrontCamera = true;
   bool _isStreaming = false;
   int _frameCount = 0;
   static const int _frameSkip = 3;
@@ -37,6 +38,8 @@ class _CameraViewState extends ConsumerState<CameraView>
       (c) => c.lensDirection == CameraLensDirection.front,
       orElse: () => cameras.first,
     );
+    _sensorOrientation = camera.sensorOrientation;
+    _isFrontCamera = camera.lensDirection == CameraLensDirection.front;
 
     _controller = CameraController(
       camera,
@@ -49,9 +52,11 @@ class _CameraViewState extends ConsumerState<CameraView>
 
     // Pass sensor orientation to gesture service
     final gestureService = ref.read(gestureServiceProvider);
-    gestureService.setSensorOrientation(camera.sensorOrientation);
-    gestureService.onLandmarksDetected = (landmarks) {
-      if (mounted) ref.read(landmarksProvider.notifier).state = landmarks;
+    gestureService.setSensorOrientation(_sensorOrientation);
+    gestureService.onLandmarksDetected = (landmarksByHand) {
+      if (mounted) {
+        ref.read(landmarksProvider.notifier).state = landmarksByHand;
+      }
     };
 
     if (!mounted) return;
@@ -91,22 +96,21 @@ class _CameraViewState extends ConsumerState<CameraView>
       );
     }
 
-    final landmarks = ref.watch(landmarksProvider);
-    final previewSize = _controller!.value.previewSize!;
-    final imageSize = Size(previewSize.height, previewSize.width);
-
+    final landmarksByHand = ref.watch(landmarksProvider);
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Stack(
         fit: StackFit.expand,
         children: [
           CameraPreview(_controller!),
-          if (landmarks != null)
+          if (landmarksByHand.isNotEmpty)
             CustomPaint(
               painter: HandOverlayPainter(
-                landmarks: landmarks,
-                imageSize: imageSize,
-                isFrontCamera: true,
+                landmarksByHand: landmarksByHand,
+                imageSize: _controller!.value.previewSize!,
+                isFrontCamera: _isFrontCamera,
+                sensorOrientation: _sensorOrientation,
+                mirrorFrontCamera: true,
               ),
             ),
           CustomPaint(painter: _FrameCornerPainter()),

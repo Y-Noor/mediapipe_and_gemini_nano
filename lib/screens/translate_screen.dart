@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/app_state.dart';
 import '../widgets/camera_view.dart';
@@ -37,6 +38,7 @@ class TranslateScreen extends ConsumerWidget {
               gesture: state.currentGesture,
               confidence: state.confidence,
             ),
+            const _AvailableGesturesStrip(),
 
             // ── Token strip ─────────────────────────────────────────
             _TokenStrip(
@@ -58,6 +60,75 @@ class TranslateScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AvailableGesturesStrip extends StatelessWidget {
+  const _AvailableGesturesStrip();
+
+  static const _fallback = <String>[
+    'HELLO',
+    'PLEASE',
+    'YES',
+    'NO',
+    'THANK_YOU',
+    'I_LOVE_YOU',
+    'WATER',
+    'WHAT',
+    'WHERE',
+    'STOP',
+    'HELP',
+  ];
+
+  Future<List<String>> _loadGestures() async {
+    try {
+      final raw = await rootBundle.loadString('assets/models/gesture_labels.txt');
+      final labels = raw
+          .split('\n')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty && e.toLowerCase() != 'none')
+          .map((e) => e.toUpperCase())
+          .toList();
+      if (labels.isEmpty) return _fallback;
+      return labels;
+    } catch (_) {
+      return _fallback;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<String>>(
+      future: _loadGestures(),
+      builder: (context, snap) {
+        final gestures = snap.data ?? _fallback;
+        return Container(
+          height: 38,
+          margin: const EdgeInsets.fromLTRB(16, 2, 16, 2),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: gestures.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 6),
+            itemBuilder: (_, i) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0x10FFFFFF),
+                border: Border.all(color: const Color(0x18FFFFFF), width: 0.5),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                gestures[i],
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.white60,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:hand_landmarker/hand_landmarker.dart';
 
 class HandOverlayPainter extends CustomPainter {
-  final List<Landmark>? landmarks;
+  final List<List<Landmark>> landmarksByHand;
   final Size imageSize;
   final bool isFrontCamera;
+  final int sensorOrientation;
+  final bool mirrorFrontCamera;
 
   static const List<(int, int)> _connections = [
     (0,1),(1,2),(2,3),(3,4),
@@ -16,23 +18,47 @@ class HandOverlayPainter extends CustomPainter {
   ];
 
   HandOverlayPainter({
-    required this.landmarks,
+    required this.landmarksByHand,
     required this.imageSize,
     this.isFrontCamera = true,
+    this.sensorOrientation = 0,
+    this.mirrorFrontCamera = false,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (landmarks == null || landmarks!.isEmpty) return;
-
-    final sx = size.width / imageSize.width;
-    final sy = size.height / imageSize.height;
+    if (landmarksByHand.isEmpty) return;
 
     Offset toOffset(Landmark lm) {
-      final x = isFrontCamera
-          ? (1.0 - lm.x) * imageSize.width * sx
-          : lm.x * imageSize.width * sx;
-      return Offset(x, lm.y * imageSize.height * sy);
+      double x = lm.x;
+      double y = lm.y;
+
+      // Hand landmarks are normalized in sensor space; rotate into preview space.
+      // Use the opposite 90deg direction mapping to match the camera preview.
+      switch (sensorOrientation % 360) {
+        case 90:
+          final nx = 1.0 - y;
+          final ny = x;
+          x = nx;
+          y = ny;
+          break;
+        case 180:
+          x = 1.0 - x;
+          y = 1.0 - y;
+          break;
+        case 270:
+          final nx = y;
+          final ny = 1.0 - x;
+          x = nx;
+          y = ny;
+          break;
+      }
+
+      if (isFrontCamera && mirrorFrontCamera) {
+        x = 1.0 - x;
+      }
+
+      return Offset(x * size.width, y * size.height);
     }
 
     final bone = Paint()
@@ -50,16 +76,20 @@ class HandOverlayPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
-    for (final (a, b) in _connections) {
-      canvas.drawLine(toOffset(landmarks![a]), toOffset(landmarks![b]), bone);
-    }
-    for (final lm in landmarks!) {
-      final pt = toOffset(lm);
-      canvas.drawCircle(pt, 4, dot);
-      canvas.drawCircle(pt, 4, dotBorder);
+    for (final landmarks in landmarksByHand) {
+      if (landmarks.length < 21) continue;
+      for (final (a, b) in _connections) {
+        canvas.drawLine(toOffset(landmarks[a]), toOffset(landmarks[b]), bone);
+      }
+      for (final lm in landmarks) {
+        final pt = toOffset(lm);
+        canvas.drawCircle(pt, 4, dot);
+        canvas.drawCircle(pt, 4, dotBorder);
+      }
     }
   }
 
   @override
-  bool shouldRepaint(HandOverlayPainter old) => old.landmarks != landmarks;
+  bool shouldRepaint(HandOverlayPainter old) =>
+      old.landmarksByHand != landmarksByHand;
 }

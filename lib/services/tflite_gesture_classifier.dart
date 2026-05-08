@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:hand_landmarker/hand_landmarker.dart';
@@ -42,7 +43,7 @@ class TfliteGestureClassifier {
       _interpreter!.run(input.reshape([1, 126]), output);
 
       final probs = (output[0] as List).cast<double>();
-      final maxIdx = probs.indexWhere((p) => p == probs.reduce((a, b) => a > b ? a : b));
+      final maxIdx = _argMax(probs);
       final confidence = probs[maxIdx];
 
       if (confidence < _confidenceThreshold) return null;
@@ -72,13 +73,21 @@ class TfliteGestureClassifier {
     return features;
   }
 
+  int _argMax(List<double> values) {
+    int best = 0;
+    for (int i = 1; i < values.length; i++) {
+      if (values[i] > values[best]) best = i;
+    }
+    return best;
+  }
+
   void _fillHand(List<Landmark> lm, Float32List out, {required int offset}) {
     if (lm.length < 21) return;
     final wristX = lm[0].x, wristY = lm[0].y, wristZ = lm[0].z;
     final dx = lm[9].x - wristX;
     final dy = lm[9].y - wristY;
     final dz = lm[9].z - wristZ;
-    final span = (dx*dx + dy*dy + dz*dz).abs() + 1e-6;
+    final span = math.sqrt(dx * dx + dy * dy + dz * dz) + 1e-6;
     for (int i = 0; i < 21; i++) {
       out[offset + i * 3 + 0] = (lm[i].x - wristX) / span;
       out[offset + i * 3 + 1] = (lm[i].y - wristY) / span;
