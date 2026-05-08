@@ -71,11 +71,22 @@ class AppStateNotifier extends StateNotifier<AppState> {
     _lastGesture = gesture;
     _lastGestureTime = now;
 
+    // Map placeholders to actual values
+    String displayGesture = gesture;
+    final lower = gesture.toLowerCase();
+    if (lower == 'sign_speak') {
+      displayGesture = 'SIGN SPEAK';
+    } else if (lower == 'name') {
+      displayGesture = 'NOOR';
+    } else {
+      displayGesture = gesture.toUpperCase();
+    }
+
     // Add token to buffer
-    final token = SignToken(sign: gesture, timestamp: now);
+    final token = SignToken(sign: displayGesture, timestamp: now);
     state = state.copyWith(
       currentTokens: [...state.currentTokens, token],
-      currentGesture: gesture,
+      currentGesture: displayGesture,
       confidence: confidence,
     );
 

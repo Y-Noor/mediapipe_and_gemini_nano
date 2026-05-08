@@ -20,7 +20,7 @@ class GeminiService {
       'HELP ME PLEASE → Could you please help me?\n'
       'THANK_YOU → Thank you.\n'
       'HELLO → Hello there!\n'
-      'WHERE BATHROOM → Where is the bathroom?\n'
+      'WHERE BATHROOM → Where is the bathroom?\n';
 
   Future<void> initialize() async {
     if (_apiKey == 'YOUR_API_KEY_HERE') {
