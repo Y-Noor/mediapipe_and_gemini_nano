@@ -4,6 +4,13 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+def agentDebugLog = { hypothesisId, location, message, data ->
+    // #region agent log
+    def line = "{\"sessionId\":\"fae9a4\",\"runId\":\"build-fix\",\"hypothesisId\":\"${hypothesisId}\",\"location\":\"${location}\",\"message\":\"${message}\",\"data\":${groovy.json.JsonOutput.toJson(data)},\"timestamp\":${System.currentTimeMillis()}}\n"
+    new File(rootProject.projectDir.parentFile, "debug-fae9a4.log").append(line)
+    // #endregion
+}
+
 android {
     namespace "com.example.signspeak"
     compileSdk flutter.compileSdkVersion
@@ -31,6 +38,22 @@ android {
             signingConfig signingConfigs.debug
         }
     }
+}
+
+dependencies {
+    implementation "com.google.mlkit:genai-prompt:1.0.0-beta2"
+}
+
+afterEvaluate {
+    // #region agent log
+    def deps = configurations.debugCompileClasspath.allDependencies
+    def mlkitDep = deps.find { it.group == "com.google.mlkit" && it.name == "genai-prompt" }
+    agentDebugLog("H6", "android/app/build.gradle:afterEvaluate", "Active Gradle file dependency check", [
+        usingGroovyBuildFile: true,
+        declared: mlkitDep != null,
+        version: mlkitDep?.version
+    ])
+    // #endregion
 }
 
 flutter {
